@@ -1,48 +1,52 @@
-from django.shortcuts import get_object_or_404
+from reviews.models import User
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
-
-from reviews.models import Categories, Comment, Genre, Review, Title
 
 
-class ReviewSerializer(serializers.ModelSerializer):
-    author = serializers.SlugRelatedField(
-        slug_field='username',
-        read_only=True,
-        default=serializers.CurrentUserDefault()
-    )
-    title = serializers.SlugRelatedField(
-        slug_field='name',
-        read_only=True,
-    )
+class UserSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(required=True)
+    email = serializers.CharField(required=True)
+    role = serializers.StringRelatedField(read_only=True)
 
     class Meta:
-        model = Review
-        fields = '__all__'
+        model = User
+        fields = ('role', 'bio', 'email', 'username', 'first_name',
+                  'last_name')
 
-    def validate(self, data):
-        request = self.context['request']
-        author = request.user
-        title_id = self.context['view'].kwargs.get('title_id')
-        title = get_object_or_404(Title, pk=title_id)
-        existing_review = Review.objects.filter(title=title, author=author)
-        if existing_review and request.method == 'POST':
-            raise ValidationError('Вы уже оставили отзыв на это произведение')
-        return data
-
-    def validate_score(self, score):
-        if score is not int and score not in range(1, 11):
-            raise ValidationError('Введите число от 1 до 10')
-        return score
+    def validate_username(self, value):
+        if value == 'me':
+            raise serializers.ValidationError('Имя me нельзя использовать')
+        return value
 
 
-class CommentSerializer(serializers.ModelSerializer):
-    author = serializers.SlugRelatedField(
-        read_only=True,
-        slug_field='username'
-    )
+class AdminUserSerializer(serializers.ModelSerializer):
 
     class Meta:
-        fields = '__all__'
-        read_only_fields = ('review',)
-        model = Comment
+        model = User
+        fields = ('role', 'bio', 'email', 'username', 'first_name',
+                  'last_name')
+
+    def validate_username(self, value):
+        if value == 'me':
+            raise serializers.ValidationError('Имя me нельзя использовать')
+        return value
+
+
+class SignUpSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ('username', 'email')
+
+    def validate_username(self, value):
+        if value == 'me':
+            raise serializers.ValidationError('Имя me нельзя использовать')
+        return value
+
+
+class TokenSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(required=True)
+    confirmation_code = serializers.CharField(required=True)
+
+    class Meta:
+        model = User
+        fields = ('username', 'confirmation_code')
