@@ -1,8 +1,11 @@
-<<<<<<< HEAD
 from rest_framework import serializers
 from django.db.models import Avg
+from reviews.models import Category, Comment, Genre, Review, Title, User
+from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
 
-from reviews.models import Category, Genre, Title
+
+
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -65,12 +68,6 @@ class CategorySerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'url': {'lookup_field': 'slug'}
         }
-=======
-from django.shortcuts import get_object_or_404
-from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
-
-from reviews.models import Categories, Comment, Genre, Review, Title
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -114,4 +111,53 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('review',)
         model = Comment
->>>>>>> e40479bb661feed86a5080e9b1cb25aee9cc36d3
+
+
+class UserSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(required=True)
+    email = serializers.CharField(required=True)
+    role = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = ('role', 'bio', 'email', 'username', 'first_name',
+                  'last_name')
+
+    def validate_username(self, value):
+        if value == 'me':
+            raise serializers.ValidationError('Имя me нельзя использовать')
+        return value
+
+
+class AdminUserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ('role', 'bio', 'email', 'username', 'first_name',
+                  'last_name')
+
+    def validate_username(self, value):
+        if value == 'me':
+            raise serializers.ValidationError('Имя me нельзя использовать')
+        return value
+
+
+class SignUpSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ('username', 'email')
+
+    def validate_username(self, value):
+        if value == 'me':
+            raise serializers.ValidationError('Имя me нельзя использовать')
+        return value
+
+
+class TokenSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(required=True)
+    confirmation_code = serializers.CharField(required=True)
+
+    class Meta:
+        model = User
+        fields = ('username', 'confirmation_code')
