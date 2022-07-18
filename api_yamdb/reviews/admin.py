@@ -1,9 +1,12 @@
 from django.contrib import admin
 from .models import Title, Category, Genre
+from django.contrib.auth.admin import UserAdmin
+from reviews.models import User
 
 admin.site.register(Title)
 admin.site.register(Category)
 admin.site.register(Genre)
+admin.site.register(User, UserAdmin)
 
 # Можно сделать наподобии если останется время
 # (смотреть в теории "Регистрация модели Post в админке")
