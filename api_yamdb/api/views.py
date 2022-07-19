@@ -4,19 +4,24 @@ from rest_framework.filters import SearchFilter
 from reviews.models import Category, Genre, Review, Title, User
 from rest_framework.response import Response
 from api.filters import TitleFilter
+from .permissions import (IsRoleAdmin,)
 from api.serializers import (CategorySerializer, GenreSerializer,
                              TitleReadSerializer, TitleSerializer,
                              ReviewSerializer, CommentSerializer,
                              AdminUserSerializer, TokenSerializer,
                              SignupSerializer, UserSerializer)
-from api.permissions import (IsAuthorOrReadOnly, IsRoleAdmin, IsRoleModerator,
-                             ReadOnly)
-from rest_framework.decorators import action, permission_classes, api_view
-from rest_framework.permissions import AllowAny, IsAuthenticated
+
+
 from django.contrib.auth.tokens import default_token_generator
-from api_yamdb.settings import ADMIN_EMAIL
 from django.core.mail import send_mail
+from api_yamdb.settings import ADMIN_EMAIL
+from django.shortcuts import get_object_or_404
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+
 
 class CreateListDeleteViewSet(mixins.CreateModelMixin,
                               mixins.ListModelMixin,
@@ -83,7 +88,8 @@ class CommentViewSet(viewsets.ModelViewSet):
         review = get_object_or_404(Review, pk=review_id, title__id=title_id)
         serializer.save(author=self.request.user, review=review)
 
-class UserViewSet(viewsets.Modelviewsets):
+
+class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = AdminUserSerializer
     permission_classes = (IsRoleAdmin,)
@@ -93,14 +99,16 @@ class UserViewSet(viewsets.Modelviewsets):
     search_fields = ('username',)
 
     @action(
-        detail=False, methods=['get', 'patch'], url_path='me', url_name='me',
+        detail=False, methods=['get', 'patch'],
+        url_path='me', url_name='me',
         permission_classes=(IsAuthenticated,)
     )
-    def me(self, request):
+    def about_me(self, request):
         serializer = UserSerializer(request.user)
         if request.method == 'PATCH':
-            serializer = UserSerializer(request.user, data=request.data,
-                                        partial=True)
+            serializer = UserSerializer(
+                request.user, data=request.data, partial=True
+            )
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -110,6 +118,10 @@ class UserViewSet(viewsets.Modelviewsets):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup(request):
+    """
+    Create user with unique username and email
+    then send confirmation code to email
+    """
     serializer = SignupSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
@@ -124,12 +136,14 @@ def token(request):
     serializer = TokenSerializer(data=request.data)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     username = serializer.data['username']
     user = get_object_or_404(User, username=username)
     confirmation_code = serializer.data['confirmation_code']
     if not default_token_generator.check_token(user, confirmation_code):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    token = RefreshToken
+
+    token = RefreshToken.for_user(user)
     return Response(
         {'token': str(token.access_token)}, status=status.HTTP_200_OK
     )
@@ -138,6 +152,10 @@ def token(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def code(request):
+    """
+    if lost the confirmation code send username and email.
+    And u got code again
+    """
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
         username = serializer.data['username']
@@ -149,9 +167,12 @@ def code(request):
 
 
 def send_confirmation_code(user):
+    """
+    Send confirmation code on email
+    """
     confirmation_code = default_token_generator.make_token(user)
-    subject = 'Код подтверждения'
-    message = f'{confirmation_code} - ваш код для авторизации'
+    subject = 'Код подтверждения YaMDb'
+    message = f'{confirmation_code} - ваш код для авторизации на YaMDb'
     admin_email = ADMIN_EMAIL
     user_email = [user.email]
     return send_mail(subject, message, admin_email, user_email)

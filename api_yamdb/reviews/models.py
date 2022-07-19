@@ -1,5 +1,5 @@
-from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 
 
@@ -69,16 +69,30 @@ class GenreTitle(models.Model):
 
 ROLE_CHOICES = (
     ('user', 'Пользователь'),
+    ('moderator', 'Модератор'),
     ('admin', 'Администратор'),
-    ('moderator', 'Модератор')
 )
 
 
 class User(AbstractUser):
-    bio = models.TextField('Биография', blank=True)
-    email = models.EmailField('Адрес электронной почты', unique=True)
-    role = models.CharField('Роль', max_length=255, choices=ROLE_CHOICES,
-                            default='user')
+    email = models.EmailField(
+        unique=True,
+        verbose_name='Адрес электронной почты'
+    )
+    role = models.CharField(
+        max_length=255,
+        choices=ROLE_CHOICES,
+        default='user',
+        verbose_name='Роль'
+    )
+    bio = models.TextField(
+        blank=True,
+        verbose_name='Биография'
+    )
+
+    class Meta:
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
 
     def __str__(self) -> str:
         return self.username
