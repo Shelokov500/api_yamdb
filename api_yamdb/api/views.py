@@ -1,26 +1,24 @@
-from rest_framework import mixins, viewsets, status, filters
-from django.shortcuts import get_object_or_404
-from rest_framework.filters import SearchFilter
-from reviews.models import Category, Genre, Review, Title, User
-from rest_framework.response import Response
-from api.filters import TitleFilter
-from .permissions import (IsRoleAdmin,)
-from api.serializers import (CategorySerializer, GenreSerializer,
-                             TitleReadSerializer, TitleSerializer,
-                             ReviewSerializer, CommentSerializer,
-                             AdminUserSerializer, TokenSerializer,
-                             SignupSerializer, UserSerializer)
-
-
+from api_yamdb.settings import ADMIN_EMAIL
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
-from api_yamdb.settings import ADMIN_EMAIL
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, status, viewsets
+from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.filters import SearchFilter
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from reviews.models import Category, Genre, Review, Title, User
+
+from api.filters import TitleFilter
+from api.serializers import (AdminUserSerializer, CategorySerializer,
+                             CommentSerializer, GenreSerializer,
+                             ReviewSerializer, SignupSerializer,
+                             TitleReadSerializer, TitleSerializer,
+                             TokenSerializer, UserSerializer)
+from api.permissions import (IsAdmin, IsAdminModeratorOwnerOrReadOnly,
+                             IsAdminOrReadOnly)
 
 
 class CreateListDeleteViewSet(mixins.CreateModelMixin,
@@ -32,7 +30,8 @@ class CreateListDeleteViewSet(mixins.CreateModelMixin,
 
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
-    # permission_classes =
+    permission_classes = (IsAdminOrReadOnly,)
+    pagination = PageNumberPagination
     filterset_class = TitleFilter
 
     def get_serializer_class(self):
@@ -41,26 +40,29 @@ class TitleViewSet(viewsets.ModelViewSet):
         return TitleReadSerializer
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
+class CategoryViewSet(CreateListDeleteViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     lookup_field = 'slug'
-    # permission_classes =
+    permission_classes = (IsAdminOrReadOnly,)
+    pagination = PageNumberPagination
     filter_backends = (SearchFilter,)
     search_fields = ('name',)
 
 
-class GenreViewSet(viewsets.ModelViewSet):
+class GenreViewSet(CreateListDeleteViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    # lookup_field = 'slug'
-    # permission_classes =
+    lookup_field = 'slug'
+    permission_classes = (IsAdminOrReadOnly,)
+    pagination = PageNumberPagination
     filter_backends = (SearchFilter,)
     search_fields = ('name',)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
+    permission_classes = (IsAdminModeratorOwnerOrReadOnly,)
 
     def get_queryset(self):
         title = get_object_or_404(Title, pk=self.kwargs.get('title_id'))
@@ -75,6 +77,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
+    permission_classes = (IsAdminModeratorOwnerOrReadOnly,)
 
     def get_queryset(self):
         title_id = self.kwargs.get('title_id')
@@ -92,7 +95,7 @@ class CommentViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = AdminUserSerializer
-    permission_classes = (IsRoleAdmin,)
+    permission_classes = (IsAdmin,)
     filter_backends = (filters.SearchFilter,)
     lookup_field = 'username'
     lookup_value_regex = r'[\w\@\.\+\-]+'

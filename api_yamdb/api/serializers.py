@@ -1,33 +1,27 @@
-from rest_framework import serializers
 from django.db.models import Avg
-from reviews.models import Category, Comment, Genre, Review, Title, User
 from django.shortcuts import get_object_or_404
+from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-
-
+from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
 class GenreSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Genre
-        fields = ('__all__')
-        lookup_field = 'slug'
-        extra_kwargs = {
-            'url': {'lookup_field': 'slug'}
-        }
+        fields = ('name', 'slug')
 
 
 class TitleSerializer(serializers.ModelSerializer):
     category = serializers.SlugRelatedField(
-        many=True,
-        read_only=True,
-        slug_field='name',
+        slug_field='slug',
+        queryset=Category.objects.all()
     )
-    genre = GenreSerializer(
-        many=True,
-        required=False,
+    genre = serializers.SlugRelatedField(
+        slug_field='slug',
+        queryset=Genre.objects.all(),
+        many=True
     )
 
     class Meta:
@@ -35,13 +29,16 @@ class TitleSerializer(serializers.ModelSerializer):
         fields = ('__all__')
 
 
+class CategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Category
+        fields = ('name', 'slug')
+
+
 class TitleReadSerializer(serializers.ModelSerializer):
     genre = GenreSerializer(read_only=True, many=True)
-    category = serializers.SlugRelatedField(
-        many=True,
-        read_only=True,
-        slug_field='name',
-    )
+    category = CategorySerializer(read_only=True)
     rating = serializers.SerializerMethodField()
 
     class Meta:
@@ -56,18 +53,10 @@ class TitleReadSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    titles = serializers.SlugRelatedField(
-        read_only=True,
-        slug_field='name',
-    )
 
     class Meta:
         model = Category
-        fields = ('__all__')
-        lookup_field = 'slug'
-        extra_kwargs = {
-            'url': {'lookup_field': 'slug'}
-        }
+        fields = ('name', 'slug')
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -111,8 +100,6 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('review',)
         model = Comment
-
-from reviews.models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
