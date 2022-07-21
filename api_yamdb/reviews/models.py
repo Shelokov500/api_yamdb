@@ -7,7 +7,7 @@ from django.db import models
 
 class Title(models.Model):
     name = models.TextField()
-    year = models.IntegerField(
+    year = models.PositiveSmallIntegerField(
         verbose_name='Год выпуска',
         validators=[MaxValueValidator(datetime.datetime.now().year)]
     )
@@ -33,7 +33,7 @@ class Title(models.Model):
     )
 
     class Meta:
-        ordering = ['year']
+        ordering = ('year',)
 
     def __str__(self):
         return self.name
@@ -46,7 +46,7 @@ class Category(models.Model):
                             max_length=50,)
 
     class Meta:
-        ordering = ['name']
+        ordering = ('name',)
 
     def __str__(self):
         return self.name
@@ -59,7 +59,7 @@ class Genre(models.Model):
                             max_length=50,)
 
     class Meta:
-        ordering = ['name']
+        ordering = ('name',)
 
     def __str__(self):
         return self.name
@@ -72,7 +72,7 @@ class GenreTitle(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['title', 'genre'],
+                fields=('title', 'genre',),
                 name='unique_title_genre'
             )
         ]
@@ -81,14 +81,12 @@ class GenreTitle(models.Model):
         return f'{self.genre} {self.title}'
 
 
-ROLE_CHOICES = (
-    ('user', 'Пользователь'),
-    ('moderator', 'Модератор'),
-    ('admin', 'Администратор'),
-)
-
-
 class User(AbstractUser):
+    ROLE_CHOICES = (
+                   ('user', 'Пользователь'),
+                   ('moderator', 'Модератор'),
+                   ('admin', 'Администратор'),
+    )
     email = models.EmailField(
         unique=True,
         verbose_name='Адрес электронной почты'

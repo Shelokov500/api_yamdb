@@ -2,7 +2,7 @@ from api_yamdb.settings import ADMIN_EMAIL
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, mixins, status, viewsets
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
@@ -12,20 +12,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from reviews.models import Category, Genre, Review, Title, User
 
 from api.filters import TitleFilter
+from api.permissions import (IsAdmin, IsAdminModeratorOwnerOrReadOnly,
+                             IsAdminOrReadOnly)
 from api.serializers import (AdminUserSerializer, CategorySerializer,
                              CommentSerializer, GenreSerializer,
                              ReviewSerializer, SignupSerializer,
                              TitleReadSerializer, TitleSerializer,
                              TokenSerializer, UserSerializer)
-from api.permissions import (IsAdmin, IsAdminModeratorOwnerOrReadOnly,
-                             IsAdminOrReadOnly)
-
-
-class CreateListDeleteViewSet(mixins.CreateModelMixin,
-                              mixins.ListModelMixin,
-                              mixins.DestroyModelMixin,
-                              viewsets.GenericViewSet):
-    pass
+from api.mixins import CreateListDeleteViewSet
 
 
 class TitleViewSet(viewsets.ModelViewSet):
