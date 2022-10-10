@@ -1,5 +1,3 @@
-import datetime
-
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -7,9 +5,8 @@ from django.db import models
 
 class Title(models.Model):
     name = models.TextField()
-    year = models.PositiveSmallIntegerField(
+    year = models.DateTimeField(
         verbose_name='Год выпуска',
-        validators=[MaxValueValidator(datetime.datetime.now().year)]
     )
     rating = models.IntegerField(
         validators=[
